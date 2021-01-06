@@ -32,10 +32,14 @@ Pipeline and PTransforms are serialized and run on a variety of runners, includi
 Using Event time (instead of processing time) brings alignment to data and eventual correctness.
 
 Using event time instead of processing timeUsing Windowing to control late data and build sensors
+
 ![batch-processing](images/dataflow-eventtime.png)
 
+
 Sliding Windows with allowed latenessControlling the environment
+
 ![batch-processing](images/dataflow-slidingwindow.png)
+
 
 There are many factors that one has to think about when building this system. Highlighting some of the constraints we ran into with continued adaptation of the framework.
 1. Footprint: How much data can we afford to keep in memory. If the data footprint is small, we can keep more data in memory and have a larger allowed lateness window and consume longer data delays. However, this makes managing downstream dependent chain more complicated.
