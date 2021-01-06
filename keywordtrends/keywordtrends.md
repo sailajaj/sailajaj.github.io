@@ -69,7 +69,7 @@ Daily trends are calculated from the hourly-trends data. For daily trends, we lo
 
 Grouping of our 
 
-![](images/trend-group2.png)
+![](images/trend-groups2.png)
 
 Trends for 12/25 : 
 
