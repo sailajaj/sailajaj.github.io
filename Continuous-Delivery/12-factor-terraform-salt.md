@@ -39,11 +39,11 @@ The consideration is around: Credentials,  resource handlers, canonical hostname
 * Deploy config files to GCS.  Install configuration from an archive file like tar.
 * SaltStack deployment and mount within the container.
 
-# ---------- Salt configuration -----------
+---------- Salt configuration -----------
 df_dm_dp_configuration:
   file.recurse:
     - name: {{ df_dm_dp.config_dir }}
-# ---------- Shell -----------
+--------- Shell -----------
 % docker run --volume /df_dm_dp/config:/opt/config ...
 
 Separate config directories by the env : *sandbox, dev, prod*
@@ -71,11 +71,18 @@ stage("Prepare variables") {
 ## Configuring Backing Service
 *  Backing services Treat backing services as attached resources.  The code for a twelve-factor app makes no distinction between local and third party services. To the app, both are attached resources, accessed via a URL or other locator/credentials stored in the config. *
 
-Note that both of these examples assume that though you’re not making any to the source code (or even the container image for the main application) you will need to replace the Pod; 
+A deploy of the twelve-factor app should be able to swap out a local MySQL database with one managed by a third party (such as Amazon RDS) without any changes to the app’s code. Likewise, a local SMTP server could be swapped with a third-party SMTP service (such as Postmark) without code changes. In both cases, only the resource handle in the config needs to change. 
 
-A deploy of the twelve-factor app should be able to swap out a local MySQL database with one managed by a third party (such as Amazon RDS) without any changes to the app’s code. Likewise, a local SMTP server could be swapped with a third-party SMTP service (such as Postmark) without code changes. In both cases, only the resource handle in the config needs to change.
+Whether we are changing credentional or we are changing the resource, in all cases we are updating the Salt Config variables and restarting the pods with the updates; 
 
-If you needed to change to, say, PostgreSQL or a remotely hosted MySQL server, you could create a new container image, update the Pod definition, and restart the Pod (or more likely the Deployment or StatefulSet managing it).  Similarly, if you’re storing credentials or address information in environment variables backed by a ConfigMap, you can change that information and replace the Pod.
+## Build, Release and Run
+Build stage: Only build code
+Release : Add config to Build
+Run : Deploy 
+
+Releases should be identifiable.  You should be able to say, ‘This deployment is running Release 1.14 of this application” or something similar, the same way we say we’re running “the OpenStack Ocata release” or “Kubernetes 1.6”.  They should also be immutable; any changes should lead to a new release.  
+
+ All of this is so that when the app is running, that “run” process can be completely automated. Twelve factor apps need to be capable of running in an automated fashion because they need to be capable of restarting should there be a problem.
 
 
 
@@ -98,30 +105,6 @@ The Twelve Factor App is a Software as a Service (SaaS) design methodology creat
 
 
 
-
-3. Config
-Configs : Credentials,  resource handlers, canonical hostnames,..
-12 factor requires strict separation of config from code. Config varies substantially across deploys, code does not.
-
-Kubernetes enables you to specify environment variables in manifests via the Downward API, but as these manifests themselves do get checked int source control, that’s not a complete solution.  The secret keys are exposed and checked into a repo.  Instead the content can be retrieved with Kubernetes ConfigMap or Secret, which can be kept separate from the application. Diogo Mónica points to a tool called Keywhiz you can use with Kubernetes, creating secure secret storage.
-
-Separate config directories by the env : sandbox, dev, prod.
-
-4.  Configuring Backing Service
-The code for a twelve-factor app makes no distinction between local and third party services. To the app, both are attached resources, accessed via a URL or other locator/credentials stored in the config. A deploy of the twelve-factor app should be able to swap out a local MySQL database with one managed by a third party (such as Amazon RDS) without any changes to the app’s code. Likewise, a local SMTP server could be swapped with a third-party SMTP service (such as Postmark) without code changes. In both cases, only the resource handle in the config needs to change.
-
-If you needed to change to, say, PostgreSQL or a remotely hosted MySQL server, you could create a new container image, update the Pod definition, and restart the Pod (or more likely the Deployment or StatefulSet managing it).  Similarly, if you’re storing credentials or address information in environment variables backed by a ConfigMap, you can change that information and replace the Pod.
-
-Note that both of these examples assume that though you’re not making any to the source code (or even the container image for the main application) you will need to replace the Pod; 
-
-5.  Build, Release and Run
-Build stage: Only build code
-Release : Add config to Build
-Run : Deploy 
-
-Releases should be identifiable.  You should be able to say, ‘This deployment is running Release 1.14 of this application” or something similar, the same way we say we’re running “the OpenStack Ocata release” or “Kubernetes 1.6”.  They should also be immutable; any changes should lead to a new release.  
-
- All of this is so that when the app is running, that “run” process can be completely automated. Twelve factor apps need to be capable of running in an automated fashion because they need to be capable of restarting should there be a problem.
 
 6. Processes
 
