@@ -4,7 +4,7 @@ Keyword analysis of search terms and their effective use in site analysis have b
 
 Keywords and its intent analysis is very specific to the site and its use cases. In this article, we are not exploring those details, rather, suggesting a generic way of spotting trends within streams of keyword. As an example, Google offers a daily view of the trending terms: [Google Daily Trends](https://trends.google.com/trends/trendingsearches/daily?geo=US) . Here is a trend of search term ‘_Idaho Earthquake_’ that google shows. If your business, in Idaho, is showing a behavior that is different from the norm, it is likely related to this event; a suggestion that can be revealed by analyzing keyword trends.
 
-<figure class="graf graf--figure" name="1229">![](/images/trends-google.png)</figure>
+<figure class="graf graf--figure" name="1229">![google trends](images/trend-google.png)</figure>
 
 ### Type of Trends
 
@@ -12,7 +12,7 @@ Based on the type of data one collects, a keyword trend has different utilities.
 
 There are popular keywords that are always trending:
 
-<figure class="graf graf--figure" name="7e0c">![Popular keywords that have a daily trend](/images/trends-popular.png)
+<figure class="graf graf--figure" name="7e0c">![Popular keywords that have a daily trend](images/trend-popular.png)
 
 <figcaption class="imageCaption">Keywords that have a daily trend</figcaption>
 
@@ -20,11 +20,11 @@ There are popular keywords that are always trending:
 
 There are spammers that cause a trend for a short burst
 
-<figure class="graf graf--figure" name="ba5f">![](/images/trends-spam.png)</figure>
+<figure class="graf graf--figure" name="ba5f">![spammer](images/trend-spam.png)</figure>
 
 And, then there are real trends that can give some meaningful insight:
 
-<figure class="graf graf--figure" name="493b">![](/images/trends-true.png)
+<figure class="graf graf--figure" name="493b">![trend](images/trend-true.png)
 
 <figcaption class="imageCaption">Keywords that have a clear trend</figcaption>
 
@@ -34,7 +34,7 @@ And, then there are real trends that can give some meaningful insight:
 
 To identify patterns in the keywords we are evaluating the data by the hour. A short spike (as shown in blue below) is likely a spammer. A long term pattern is a popular term. A query term that is trending in the most recent hours (as shown in pink below) is a trend worth identifying.
 
-<figure class="graf graf--figure" name="8435">![](https://cdn-images-1.medium.com/max/1600/1*YLuOSlOTcBLhHgsn6QVO1A.png)</figure>
+<figure class="graf graf--figure" name="8435">![](images/trend-popular.png)</figure>
 
 For calculation of hourly search trends, we calculate query count by keyword, and derive an RMSE score (Root mean square error) for the window, using a formula that weighs the trend for the current window more heavily. 
 
