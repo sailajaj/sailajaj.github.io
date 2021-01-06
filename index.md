@@ -9,6 +9,7 @@
 
 * [ML : Keyword Trends](keywordtrends/keywordtrends.md)
 * [Dataflow Models with Apache Beam](realtime-streams/dataflow-beam.md)
+* [12-factor app is a good start of CI/CD; But it falls short](continuous-delivery/12-factor.md)
 
 
 
