@@ -5,7 +5,6 @@ Keyword analysis of search terms and their effective use in site analysis have b
 Keywords and its intent analysis is very specific to the site and its use cases. In this article, we are not exploring those details, rather, suggesting a generic way of spotting trends within streams of keyword. As an example, Google offers a daily view of the trending terms: [Google Daily Trends](https://trends.google.com/trends/trendingsearches/daily?geo=US) . Here is a trend of search term ‘_Idaho Earthquake_’ that google shows. If your business, in Idaho, is showing a behavior that is different from the norm, it is likely related to this event; a suggestion that can be revealed by analyzing keyword trends.
 
 ![google trends](images/trend-google.png)
-<figure class="graf graf--figure" name="1229">![google trends](images/trend-google.png)</figure>
 
 ### Type of Trends
 
@@ -13,37 +12,28 @@ Based on the type of data one collects, a keyword trend has different utilities.
 
 There are popular keywords that are always trending:
 
-<figure class="graf graf--figure" name="7e0c">![Popular keywords that have a daily trend](images/trend-popular.png)
-
-<figcaption class="imageCaption">Keywords that have a daily trend</figcaption>
-
-</figure>
+![Popular keywords that have a daily trend](images/trend-popular.png)
 
 There are spammers that cause a trend for a short burst
 
-<figure class="graf graf--figure" name="ba5f">![spammer](images/trend-spam.png)</figure>
+![spammer](images/trend-spam.png)
 
 And, then there are real trends that can give some meaningful insight:
 
-<figure class="graf graf--figure" name="493b">![trend](images/trend-true.png)
-
-<figcaption class="imageCaption">Keywords that have a clear trend</figcaption>
-
-</figure>
+![trend](images/trend-true.png)
 
 ### Algorithm
 
 To identify patterns in the keywords we are evaluating the data by the hour. A short spike (as shown in blue below) is likely a spammer. A long term pattern is a popular term. A query term that is trending in the most recent hours (as shown in pink below) is a trend worth identifying.
 
-<figure class="graf graf--figure" name="8435">![](images/trend-popular.png)</figure>
-
+![](images/trend-rolling-window.png)
+  
 For calculation of hourly search trends, we calculate query count by keyword, and derive an RMSE score (Root mean square error) for the window, using a formula that weighs the trend for the current window more heavily. 
 
 When we weight the current window more heavily than the other, the spam trends with time will have a lower RMSE score. The long term popular terms will have a consistent RMSE score with time, making it easy to evaluate and remove.
 
-<figure class="graf graf--figure" name="8ec2">![](https://cdn-images-1.medium.com/max/1600/1*2XS1dBG5ndOCdruMeur1ZQ.png)</figure>
-
-<figure class="graf graf--figure" name="af0e">![](https://cdn-images-1.medium.com/max/1600/1*j7djGRhznGKL1Fph3phd-w.png)</figure>
+![](images/trend-equ2.png)
+![](images/trend-equ3.png)
 
 ### Data Preparation
 
@@ -79,8 +69,8 @@ Daily trends are calculated from the hourly-trends data. For daily trends, we lo
 
 Grouping of our 
 
-<figure class="graf graf--figure" name="8128">![](https://cdn-images-1.medium.com/max/1600/1*zDUFvfEfUkmKouC0Xw_bbA.png)</figure>
+![](images/trend-group2.png)
 
 Trends for 12/25 : 
 
-<figure class="graf graf--figure" name="9213">![](https://cdn-images-1.medium.com/max/1600/1*s-6VVkyv8oQ0k4TzZ9UcQw.png)</figure>
+![](images/trend-results2.png)
