@@ -1,8 +1,10 @@
 
 # Managing infrastructure as code
-With Cloud platformns, hardware and infrastructure maintenance are treated with the same constraints as ALM (Application lifecycle management; Design, Build, Test, Deploy, Post-Deploy: [LINK](https://community.anaplan.com/t5/Best-Practices/What-is-Application-Lifecycle-Management-ALM/ta-p/33539)).  Though this is stepping in the right direction, there is still much confusion around how to build an effective CI/CD model.
+With Cloud platformns, hardware and infrastructure maintenance are treated with the same constraints as ALM (Application lifecycle management; Design, Build, Test, Deploy, Post-Deploy: [LINK](https://community.anaplan.com/t5/Best-Practices/What-is-Application-Lifecycle-Management-ALM/ta-p/33539)).  Though this is stepping in the right direction, there is that remains to build an effective CI/CD model.
 
-Here is a look through the 12-factor app; how we built CI/CD model with * Terraform and Salt stack * and where we fell short.
+We can start with 12-factor app; Using the best of technologies around Terraform/Jenkins/Git there are still some imposing gaps that we are trying to address in this document.
+
+Our initial goals were to address the following constrainds along with 12-factor app:
 
 * Reliable Scalability across a slew of Services
 * Clear and concise means of making alterations to a Service or multiple services
@@ -15,13 +17,14 @@ Here is a look through the 12-factor app; how we built CI/CD model with * Terraf
     * Varied auth styles such as OAuth which do token rotation.
     * Database, SFTP, S3, and e-mail delivery.
 
-## Codebase
-* One codebase tracked in revision control, many deploys *
+Walking through the 12-factor points sequentially:
+### Codebase
+*One codebase tracked in revision control, many deploys*
 
 Container orchestration inherently forces revision control on the code as new docker image is created for every code release.  The Docker file is versioned separately from the code.  Each Pod can choose which versioned docker file to run.  With this, we can have a single version run on multiple deploye; or have different versions of the code base deployed at the same time.  
 
-## Dependencies
-* Dependencies Explicitly declare and isolate dependencies *
+### Dependencies
+*Dependencies Explicitly declare and isolate dependencies*
 
 > An application should be self-contained.  All dependencies should be explicitly stated.  There should not be any implicit assumptions on the availability of a software in the OS env.
 
@@ -31,8 +34,8 @@ For applications that are modularized and depend on other components, such as an
 
 [Managing Versioned resources accross Services/Apps](/images/CI-Orchestration.png)
 
-## Config
-* Config Store config in the environment separately from code. Config varies substantially across deploys, code does not.* 
+### Config
+*Config Store config in the environment separately from code. Config varies substantially across deploys, code does not.* 
 
 The consideration is around: Credentials,  resource handlers, canonical hostnames,configuration per runtime env, ...
 * Build a local Docker image with environment specific configuration.
@@ -46,36 +49,14 @@ df_dm_dp_configuration:
 --------- Shell -----------
 % docker run --volume /df_dm_dp/config:/opt/config ...
 
-Separate config directories by the env : *sandbox, dev, prod*
-stage("Prepare variables") {
-    gitFlow.whenMaster {
-      GCS_ACCOUNT = "sa-prod"
-      GOOGLE_PROJECT_ID = "prd"
-      pillar_branch = 'master'
-      prefix = "prd-"
-    }
-    gitFlow.whenDevelop {
-      GCS_ACCOUNT = "sa-dev"
-      GOOGLE_PROJECT_ID = "dev"
-      pillar_branch = 'develop'
-      prefix = "dev-"
-    }
-    gitFlow.whenFeature {
-      GCS_ACCOUNT = "sbx"
-      GOOGLE_PROJECT_ID = "sbx"
-      pillar_branch = 'develop'
-      prefix = "sbx-"
-    }
-  }
-
-## Configuring Backing Service
-*  Backing services Treat backing services as attached resources.  The code for a twelve-factor app makes no distinction between local and third party services. To the app, both are attached resources, accessed via a URL or other locator/credentials stored in the config. *
+### Configuring Backing Service
+*Backing services Treat backing services as attached resources.  The code for a twelve-factor app makes no distinction between local and third party services. To the app, both are attached resources, accessed via a URL or other locator/credentials stored in the config.*
 
 A deploy of the twelve-factor app should be able to swap out a local MySQL database with one managed by a third party (such as Amazon RDS) without any changes to the app’s code. Likewise, a local SMTP server could be swapped with a third-party SMTP service (such as Postmark) without code changes. In both cases, only the resource handle in the config needs to change. 
 
 Whether we are changing credentional or we are changing the resource, in all cases we are updating the Salt Config variables and restarting the pods with the updates; 
 
-## Build, Release and Run
+### Build, Release and Run
 Build stage: Only build code
 Release : Add config to Build
 Run : Deploy 
@@ -84,6 +65,44 @@ Releases should be identifiable.  You should be able to say, ‘This deployment 
 
  All of this is so that when the app is running, that “run” process can be completely automated. Twelve factor apps need to be capable of running in an automated fashion because they need to be capable of restarting should there be a problem.
 
+### Processes
+
+Twelve-factor processes are stateless and share-nothing. Any data that needs to persist must be stored in a stateful backing service, typically a database.
+
+The memory space or filesystem of the process can be used as a brief, single-transaction cache. For example, downloading a large file, operating on it, and storing the results of the operation in the database. The twelve-factor app never assumes that anything cached in memory or on disk will be available on a future request or job – with many processes of each type running, chances are high that a future request will be served by a different process. Even when running only one process, a restart (triggered by code deploy, config change, or the execution environment relocating the process to a different physical location) will usually wipe out all local (e.g., memory and filesystem) state.
+
+###  Port Binding
+
+The twelve-factor app is completely self-contained and does not rely on runtime injection of a webserver into the execution environment to create a web-facing service. The web app exports HTTP as a service by binding to a port, and listening to requests coming in on that port.
+
+In a local development environment, the developer visits a service URL like http://localhost:5000/ to access the service exported by their app. In deployment, a routing layer handles routing requests from a public-facing hostname to the port-bound web processes.  This is typically implemented by using dependency declaration to add a webserver library to the app
+
+###  Concurrency:
+
+The process model truly shines when it comes time to scale out. The share-nothing, horizontally partitionable nature of twelve-factor app processes means that adding more concurrency is a simple and reliable operation. The array of process types and number of processes of each type is known as the process formation.  
+
+When you’re writing a twelve-factor app, make sure that  you provide a way for it to be scaled out, rather than scaled up. That means that in order to add more capacity, you should be able to add more instances rather than more memory or CPU to the machine on which the app is running. Note that this specifically means being able to start additional processes on additional machines, which is, fortunately, a key capability of Kubernetes. 
+
+###  Disposabilty
+
+Processes should strive to minimize startup time. Ideally, a process takes a few seconds from the time the launch command is executed until the process is up and ready to receive requests or jobs.
+
+With Kubernetes we can perform green-blue deployments for easy disposabilty.
+
+###  Dev/prod parity 
+Keep development, staging, and production as similar as possible 
+
+### Logs
+
+Logs are the stream of aggregated, time-ordered events collected from the output streams of all running processes and backing services.  During local development, the developer will view this stream in the foreground of their terminal to observe the app’s behavior.n staging or production deploys, each process’ stream will be captured by the execution environment, collated together with all other streams from the app, and routed to one or more final destinations for viewing and long-term archival. 
+
+
+=> Key to developers requiring prod access.  If logs are streamed to a central point then there is no compelling reason for prod access.
+
+### Admin
+Run admin/management tasks as one-off processes
+
+ 
 
 
 #
@@ -105,44 +124,6 @@ The Twelve Factor App is a Software as a Service (SaaS) design methodology creat
 
 
 
-
-6. Processes
-
-Twelve-factor processes are stateless and share-nothing. Any data that needs to persist must be stored in a stateful backing service, typically a database.
-
-The memory space or filesystem of the process can be used as a brief, single-transaction cache. For example, downloading a large file, operating on it, and storing the results of the operation in the database. The twelve-factor app never assumes that anything cached in memory or on disk will be available on a future request or job – with many processes of each type running, chances are high that a future request will be served by a different process. Even when running only one process, a restart (triggered by code deploy, config change, or the execution environment relocating the process to a different physical location) will usually wipe out all local (e.g., memory and filesystem) state.
-
- 7. Port Binding
-
-The twelve-factor app is completely self-contained and does not rely on runtime injection of a webserver into the execution environment to create a web-facing service. The web app exports HTTP as a service by binding to a port, and listening to requests coming in on that port.
-
-In a local development environment, the developer visits a service URL like http://localhost:5000/ to access the service exported by their app. In deployment, a routing layer handles routing requests from a public-facing hostname to the port-bound web processes.  This is typically implemented by using dependency declaration to add a webserver library to the app
-
-8. Concurrency:
-
-The process model truly shines when it comes time to scale out. The share-nothing, horizontally partitionable nature of twelve-factor app processes means that adding more concurrency is a simple and reliable operation. The array of process types and number of processes of each type is known as the process formation.  
-
-When you’re writing a twelve-factor app, make sure that  you provide a way for it to be scaled out, rather than scaled up. That means that in order to add more capacity, you should be able to add more instances rather than more memory or CPU to the machine on which the app is running. Note that this specifically means being able to start additional processes on additional machines, which is, fortunately, a key capability of Kubernetes. 
-
-9. Disposabilty
-
-Processes should strive to minimize startup time. Ideally, a process takes a few seconds from the time the launch command is executed until the process is up and ready to receive requests or jobs.
-
-With Kubernetes we can perform green-blue deployments for easy disposabilty.
-
-10, Dev/prod parity 
-Keep development, staging, and production as similar as possible 
-
-11. Logs
-
-Logs are the stream of aggregated, time-ordered events collected from the output streams of all running processes and backing services.  During local development, the developer will view this stream in the foreground of their terminal to observe the app’s behavior.n staging or production deploys, each process’ stream will be captured by the execution environment, collated together with all other streams from the app, and routed to one or more final destinations for viewing and long-term archival. 
-
-=> Key to developers requiring prod access.  If logs are streamed to a central point then there is no compelling reason for prod access.
-
-12.  Admin
-Run admin/management tasks as one-off processes
-
- 
 
 ---------
 
