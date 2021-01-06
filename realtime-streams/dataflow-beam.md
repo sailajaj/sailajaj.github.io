@@ -4,8 +4,11 @@ When dealing with big data and challenges around data aggregations ,with the co
 2. Large amounts of data that can only be processed in chunks (or windows)
 3. Data correctness and accuracy is important; self correcting and sensors to reprocess data needs to be intrinsic to the system; minimize manual intervention
 Traditional Batch Processing
-Data aggregation of large volumes has typically been done using batch processing. As shown in the diagram below, batch jobs typically work with fixed intervals for window sizes, aggregating out-of-order data by its processing time. With distributed data sources feeding the pipeline, there is no guarantee the data will come in sequence. With that, the aggregations in batch jobs are more sensitive to the processing time rather than event time leading to difficulty in controlling data correctness with time. 
+Data aggregation of large volumes has typically been done using batch pxrocessing. As shown in the diagram below, batch jobs typically work with fixed intervals for window sizes, aggregating out-of-order data by its processing time. With distributed data sources feeding the pipeline, there is no guarantee the data will come in sequence. With that, the aggregations in batch jobs are more sensitive to the processing time rather than event time leading to difficulty in controlling data correctness with time. 
 Batch jobs typically follow the Map->Reduce pattern where the reductions start with small intervals and further reductions(or aggregations) of these smaller chunks happen with time. In this model, small drops in data are accepted within the selected threshold. Large delays in data have to be reprocessed with the entire dependency chain being rerun for all the past and current intervals. This requires manual up-keep; with human and system resources checking and redoing the data aggregation and rebuilding our composite data.
+
+![batch-processing](images/dataflow-batch.png)
+
 Understanding what we need from data
  Understanding what we need from our data aggregations is an important first step as there are many variants based on the type of data one is working with. A few are listed below:
 Batch with Fixed Windows
@@ -29,8 +32,11 @@ Pipeline and PTransforms are serialized and run on a variety of runners, includi
 Using Event time (instead of processing time) brings alignment to data and eventual correctness.
 
 Using event time instead of processing timeUsing Windowing to control late data and build sensors
+![batch-processing](images/dataflow-eventtime.png)
 
 Sliding Windows with allowed latenessControlling the environment
+![batch-processing](images/dataflow-slidingwindow.png)
+
 There are many factors that one has to think about when building this system. Highlighting some of the constraints we ran into with continued adaptation of the framework.
 1. Footprint: How much data can we afford to keep in memory. If the data footprint is small, we can keep more data in memory and have a larger allowed lateness window and consume longer data delays. However, this makes managing downstream dependent chain more complicated.
 2. Heuristics: What is my optimal window size? Optimal window size determines the chunks in which data is present in its aggregated form in the DB and also determines the number of chunks that have to be  re-processed on delays. These window sizes have to remain consistent for downstream processes. If 95% of data, on average, is coming within a window, is that an optimal/accepted size?  
