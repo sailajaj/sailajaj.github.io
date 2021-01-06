@@ -7,7 +7,7 @@
 
 ## Write ups 
 
-* [ML : Keyword Trends](keywordtrends.md)
+* [ML : Keyword Trends](keywordtrends/keywordtrends.md)
 * [Dataflow Models with Apache Beam](keyword_trends.md)
 
 
