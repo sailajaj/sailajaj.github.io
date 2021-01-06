@@ -4,6 +4,7 @@ Keyword analysis of search terms and their effective use in site analysis have b
 
 Keywords and its intent analysis is very specific to the site and its use cases. In this article, we are not exploring those details, rather, suggesting a generic way of spotting trends within streams of keyword. As an example, Google offers a daily view of the trending terms: [Google Daily Trends](https://trends.google.com/trends/trendingsearches/daily?geo=US) . Here is a trend of search term ‘_Idaho Earthquake_’ that google shows. If your business, in Idaho, is showing a behavior that is different from the norm, it is likely related to this event; a suggestion that can be revealed by analyzing keyword trends.
 
+![google trends](images/trend-google.png)
 <figure class="graf graf--figure" name="1229">![google trends](images/trend-google.png)</figure>
 
 ### Type of Trends
