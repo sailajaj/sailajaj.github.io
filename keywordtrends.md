@@ -4,7 +4,7 @@ Keyword analysis of search terms and their effective use in site analysis have b
 
 Keywords and its intent analysis is very specific to the site and its use cases. In this article, we are not exploring those details, rather, suggesting a generic way of spotting trends within streams of keyword. As an example, Google offers a daily view of the trending terms: [Google Daily Trends](https://trends.google.com/trends/trendingsearches/daily?geo=US) . Here is a trend of search term ‘_Idaho Earthquake_’ that google shows. If your business, in Idaho, is showing a behavior that is different from the norm, it is likely related to this event; a suggestion that can be revealed by analyzing keyword trends.
 
-<figure class="graf graf--figure" name="1229">![](images/trends-google.png)</figure>
+<figure class="graf graf--figure" name="1229">![](/images/trends-google.png)</figure>
 
 ### Type of Trends
 
@@ -12,7 +12,7 @@ Based on the type of data one collects, a keyword trend has different utilities.
 
 There are popular keywords that are always trending:
 
-<figure class="graf graf--figure" name="7e0c">![Popular keywords that have a daily trend](https://cdn-images-1.medium.com/max/1600/1*61zbblZwKPC53b3Ue1GgTw.png)
+<figure class="graf graf--figure" name="7e0c">![Popular keywords that have a daily trend](/images/trends-popular.png)
 
 <figcaption class="imageCaption">Keywords that have a daily trend</figcaption>
 
@@ -20,11 +20,11 @@ There are popular keywords that are always trending:
 
 There are spammers that cause a trend for a short burst
 
-<figure class="graf graf--figure" name="ba5f">![](https://cdn-images-1.medium.com/max/1600/1*DP-xFv1XS-58L31bcvxfXg.png)</figure>
+<figure class="graf graf--figure" name="ba5f">![](/images/trends-spam.png)</figure>
 
 And, then there are real trends that can give some meaningful insight:
 
-<figure class="graf graf--figure" name="493b">![](https://cdn-images-1.medium.com/max/1600/1*SYXyMiLFyFYOdbDdHP3aHA.png)
+<figure class="graf graf--figure" name="493b">![](/images/trends-true.png)
 
 <figcaption class="imageCaption">Keywords that have a clear trend</figcaption>
 
