@@ -1,3 +1,86 @@
+
+# Managing infrastructure as code
+With Cloud platformns, hardware and infrastructure maintenance are treated with the same constraints as ALM (Application lifecycle management; Design, Build, Test, Deploy, Post-Deploy: [LINK](https://community.anaplan.com/t5/Best-Practices/What-is-Application-Lifecycle-Management-ALM/ta-p/33539)).  Though this is stepping in the right direction, there is still much confusion around how to build an effective CI/CD model.
+
+Here is a look through the 12-factor app; how we built CI/CD model with * Terraform and Salt stack * and where we fell short.
+
+* Reliable Scalability across a slew of Services
+* Clear and concise means of making alterations to a Service or multiple services
+* Enables a separation between runtime environments (Sandbox, Dev, Prod)
+* Secure credentials from unauthorized access 
+* At a configuration level
+    * Inconsistencies in format, naming, and logging
+    * Unused variables
+    * Large number of config files
+    * Varied auth styles such as OAuth which do token rotation.
+    * Database, SFTP, S3, and e-mail delivery.
+
+## Codebase
+* One codebase tracked in revision control, many deploys *
+
+Container orchestration inherently forces revision control on the code as new docker image is created for every code release.  The Docker file is versioned separately from the code.  Each Pod can choose which versioned docker file to run.  With this, we can have a single version run on multiple deploye; or have different versions of the code base deployed at the same time.  
+
+## Dependencies
+* Dependencies Explicitly declare and isolate dependencies *
+
+> An application should be self-contained.  All dependencies should be explicitly stated.  There should not be any implicit assumptions on the availability of a software in the OS env.
+
+This requirement again is intrinsic to containerization.  How do we manage all the different versions of software across different Services?
+
+For applications that are modularized and depend on other components, such as an HTTP service and a log fetcher, Kubernetes provides a way to combine all of these pieces into a single Pod, for an environment that encapsulates those pieces appropriately.
+
+[Managing Versioned resources accross Services/Apps](/images/CI-Orchestration.png)
+
+## Config
+* Config Store config in the environment separately from code. Config varies substantially across deploys, code does not.* 
+
+The consideration is around: Credentials,  resource handlers, canonical hostnames,configuration per runtime env, ...
+* Build a local Docker image with environment specific configuration.
+* Deploy config files to GCS.  Install configuration from an archive file like tar.
+* SaltStack deployment and mount within the container.
+
+# ---------- Salt configuration -----------
+df_dm_dp_configuration:
+  file.recurse:
+    - name: {{ df_dm_dp.config_dir }}
+# ---------- Shell -----------
+% docker run --volume /df_dm_dp/config:/opt/config ...
+
+Separate config directories by the env : *sandbox, dev, prod*
+stage("Prepare variables") {
+    gitFlow.whenMaster {
+      GCS_ACCOUNT = "sa-prod"
+      GOOGLE_PROJECT_ID = "prd"
+      pillar_branch = 'master'
+      prefix = "prd-"
+    }
+    gitFlow.whenDevelop {
+      GCS_ACCOUNT = "sa-dev"
+      GOOGLE_PROJECT_ID = "dev"
+      pillar_branch = 'develop'
+      prefix = "dev-"
+    }
+    gitFlow.whenFeature {
+      GCS_ACCOUNT = "sbx"
+      GOOGLE_PROJECT_ID = "sbx"
+      pillar_branch = 'develop'
+      prefix = "sbx-"
+    }
+  }
+
+## Configuring Backing Service
+*  Backing services Treat backing services as attached resources.  The code for a twelve-factor app makes no distinction between local and third party services. To the app, both are attached resources, accessed via a URL or other locator/credentials stored in the config. *
+
+Note that both of these examples assume that though you’re not making any to the source code (or even the container image for the main application) you will need to replace the Pod; 
+
+A deploy of the twelve-factor app should be able to swap out a local MySQL database with one managed by a third party (such as Amazon RDS) without any changes to the app’s code. Likewise, a local SMTP server could be swapped with a third-party SMTP service (such as Postmark) without code changes. In both cases, only the resource handle in the config needs to change.
+
+If you needed to change to, say, PostgreSQL or a remotely hosted MySQL server, you could create a new container image, update the Pod definition, and restart the Pod (or more likely the Deployment or StatefulSet managing it).  Similarly, if you’re storing credentials or address information in environment variables backed by a ConfigMap, you can change that information and replace the Pod.
+
+
+
+#
+
 The Twelve Factor App is a Software as a Service (SaaS) design methodology created by Heroku. The idea is that in order to be really suited to SaaS and avoid problems with software erosion — where over time an application that’s not updated gets to be out of sync with the latest operating systems, security patches, and so on — an app should follow these 12 principles:
 
     Codebase One codebase tracked in revision control, many deploys
@@ -13,18 +96,8 @@ The Twelve Factor App is a Software as a Service (SaaS) design methodology creat
     Logs  Treat logs as event streams
     Admin processes Run admin/management tasks as one-off processes
 
-1. Codebase:
-With container orchestration the revision control is tracked in the docker file specifying the version to be run.  Image built from Versioned code repos are stored by their version in Docker Hubs or Nexus.  A Pod declares the particular image they intent to run.  In this way we can have multiple deploys of the same versioned code base; or have different versions of the code base deployed at the same time.  However, each code base has a one-to-one correspondence to a version.
 
-spec:
-       containers:
-       - name: AcctApp
-         image: acctApp:v3
 
-2. Dependencies: 
-An application should be self-contained.  All dependencies should be explicitly stated.  There should not be any implicit assumptions on the availability of a software in the OS env (ex: dependency on curl should be explicitly stated).  This also includes ensuring that the service is not compromised by conflicting libraries installed on the host.
-Python allows us to use pip install for dependencies and VirtualEnv to contain these dependencies within the env.
-For applications that are modularized and depend on other components, such as an HTTP service and a log fetcher, Kubernetes provides a way to combine all of these pieces into a single Pod, for an environment that encapsulates those pieces appropriately.
 
 3. Config
 Configs : Credentials,  resource handlers, canonical hostnames,..
