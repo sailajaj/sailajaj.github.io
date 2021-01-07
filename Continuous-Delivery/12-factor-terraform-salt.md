@@ -1,108 +1,109 @@
 
 # Managing infrastructure as code
-With Cloud platformns, hardware and infrastructure maintenance are treated with the same constraints as ALM (Application lifecycle management; Design, Build, Test, Deploy, Post-Deploy: [LINK](https://community.anaplan.com/t5/Best-Practices/What-is-Application-Lifecycle-Management-ALM/ta-p/33539)).  Though this is stepping in the right direction, there is that remains to build an effective CI/CD model.
+There has been much discussion around Infrastructure as Code (IAC); Adapting 12-factor App [12-factor](https://12factor.net/) or bringing basic ALM principles to write infrastructure code.  With cloud platforms adapting containerization and supporting its orchestration, it has enforced/automated much of the needs stated in the 12-factor.
 
-We can start with 12-factor app; Using the best of technologies around Terraform/Jenkins/Git there are still some imposing gaps that we are trying to address in this document.
+Using the best of technologies around Terraform/Jenkins/Git/Cloud we streamlined our pipelines, but fell short in many places.  Here we want to highlight where we fell short and the workarounds.
 
-Our initial goals were to address the following constrainds along with 12-factor app:
+We have two types of Deploys
+Self-managed Apps that we containerize and manage deploy + run.
+Apps that are running within a cloud managed services and are deployed within the constraints imposed by the managed service.
 
-* Reliable Scalability across a slew of Services
-* Clear and concise means of making alterations to a Service or multiple services
-* Enables a separation between runtime environments (Sandbox, Dev, Prod)
-* Secure credentials from unauthorized access 
-* At a configuration level
-    * Inconsistencies in format, naming, and logging
-    * Unused variables
-    * Large number of config files
-    * Varied auth styles such as OAuth which do token rotation.
-    * Database, SFTP, S3, and e-mail delivery.
+##Self-Managed Apps
 
-Walking through the 12-factor points sequentially:
-### Codebase
-*One codebase tracked in revision control, many deploys*
+![self-managed apps](images/container-deploy.png)
 
-Container orchestration inherently forces revision control on the code as new docker image is created for every code release.  The Docker file is versioned separately from the code.  Each Pod can choose which versioned docker file to run.  With this, we can have a single version run on multiple deploye; or have different versions of the code base deployed at the same time.  
-
-### Dependencies
-*Dependencies Explicitly declare and isolate dependencies*
-
-> An application should be self-contained.  All dependencies should be explicitly stated.  There should not be any implicit assumptions on the availability of a software in the OS env.
-
-This requirement again is intrinsic to containerization.  How do we manage all the different versions of software across different Services?
-
-For applications that are modularized and depend on other components, such as an HTTP service and a log fetcher, Kubernetes provides a way to combine all of these pieces into a single Pod, for an environment that encapsulates those pieces appropriately.
-
-[Managing Versioned resources accross Services/Apps](/images/CI-Orchestration.png)
-
-### Config
-*Config Store config in the environment separately from code. Config varies substantially across deploys, code does not.* 
-
-The consideration is around: Credentials,  resource handlers, canonical hostnames,configuration per runtime env, ...
-* Build a local Docker image with environment specific configuration.
-* Deploy config files to GCS.  Install configuration from an archive file like tar.
-* SaltStack deployment and mount within the container.
-
----------- Salt configuration -----------
-df_dm_dp_configuration:
-  file.recurse:
-    - name: {{ df_dm_dp.config_dir }}
---------- Shell -----------
-% docker run --volume /df_dm_dp/config:/opt/config ...
-
-### Configuring Backing Service
-*Backing services Treat backing services as attached resources.  The code for a twelve-factor app makes no distinction between local and third party services. To the app, both are attached resources, accessed via a URL or other locator/credentials stored in the config.*
-
-A deploy of the twelve-factor app should be able to swap out a local MySQL database with one managed by a third party (such as Amazon RDS) without any changes to the app’s code. Likewise, a local SMTP server could be swapped with a third-party SMTP service (such as Postmark) without code changes. In both cases, only the resource handle in the config needs to change. 
-
-Whether we are changing credentional or we are changing the resource, in all cases we are updating the Salt Config variables and restarting the pods with the updates; 
-
-### Build, Release and Run
-Build stage: Only build code
-Release : Add config to Build
-Run : Deploy 
-
-Releases should be identifiable.  You should be able to say, ‘This deployment is running Release 1.14 of this application” or something similar, the same way we say we’re running “the OpenStack Ocata release” or “Kubernetes 1.6”.  They should also be immutable; any changes should lead to a new release.  
-
- All of this is so that when the app is running, that “run” process can be completely automated. Twelve factor apps need to be capable of running in an automated fashion because they need to be capable of restarting should there be a problem.
-
-### Processes
-
-Twelve-factor processes are stateless and share-nothing. Any data that needs to persist must be stored in a stateful backing service, typically a database.
-
-The memory space or filesystem of the process can be used as a brief, single-transaction cache. For example, downloading a large file, operating on it, and storing the results of the operation in the database. The twelve-factor app never assumes that anything cached in memory or on disk will be available on a future request or job – with many processes of each type running, chances are high that a future request will be served by a different process. Even when running only one process, a restart (triggered by code deploy, config change, or the execution environment relocating the process to a different physical location) will usually wipe out all local (e.g., memory and filesystem) state.
-
-###  Port Binding
-
-The twelve-factor app is completely self-contained and does not rely on runtime injection of a webserver into the execution environment to create a web-facing service. The web app exports HTTP as a service by binding to a port, and listening to requests coming in on that port.
-
-In a local development environment, the developer visits a service URL like http://localhost:5000/ to access the service exported by their app. In deployment, a routing layer handles routing requests from a public-facing hostname to the port-bound web processes.  This is typically implemented by using dependency declaration to add a webserver library to the app
-
-###  Concurrency:
-
-The process model truly shines when it comes time to scale out. The share-nothing, horizontally partitionable nature of twelve-factor app processes means that adding more concurrency is a simple and reliable operation. The array of process types and number of processes of each type is known as the process formation.  
-
-When you’re writing a twelve-factor app, make sure that  you provide a way for it to be scaled out, rather than scaled up. That means that in order to add more capacity, you should be able to add more instances rather than more memory or CPU to the machine on which the app is running. Note that this specifically means being able to start additional processes on additional machines, which is, fortunately, a key capability of Kubernetes. 
-
-###  Disposabilty
-
-Processes should strive to minimize startup time. Ideally, a process takes a few seconds from the time the launch command is executed until the process is up and ready to receive requests or jobs.
-
-With Kubernetes we can perform green-blue deployments for easy disposabilty.
-
-###  Dev/prod parity 
-Keep development, staging, and production as similar as possible 
-
-### Logs
-
-Logs are the stream of aggregated, time-ordered events collected from the output streams of all running processes and backing services.  During local development, the developer will view this stream in the foreground of their terminal to observe the app’s behavior.n staging or production deploys, each process’ stream will be captured by the execution environment, collated together with all other streams from the app, and routed to one or more final destinations for viewing and long-term archival. 
+Walking through the 12-factor considerations:
+### Codebase : One codebase tracked in revision control, many deploys  : There is a one to one correspondence between Code base version (git) to Build Container version.  Container version is declared in a separate file in the code base.
 
 
-=> Key to developers requiring prod access.  If logs are streamed to a central point then there is no compelling reason for prod access.
+### Dependencies : Explicitly declare and isolate dependencies  : Dependencies are managed in a Docker Template file.  All self-managed apps within the same project share this dependency.
 
-### Admin
-Run admin/management tasks as one-off processes
+
+### Config:  Store config in the environment :  We use Terraform for orchestration.  Configuration variables are declared in the terraform files.   The configuration includes centrally adapted services such as:
+Logging service
+SMTP service
+Backend Services (databases)
+
+### Backing services : Treat backing services as attached resources : Configuration files in (3 above) state the values for these variables
+
+
+### Build, release, run:  Strictly separate build and run stages :  Terraform separates the configuration for orchestrating the different environments (dev, stage, prod,..)
+Deploy stage attaches environment specific variables from terraform scripts to update the container.
+The Version to be deployed is part of the terraform scripts
+Terraform scripts are Validated and Tested before deploy
+
+
+### Processes : Execute the app as one or more stateless processes :  Apps are stateless except the caching layer.  How do we bring statelessness to the caching layer?
+Caching layer is a service by itself, Apps use REST calls to update and retrieve its content
+
+
+### Port binding  Export services via port binding :  Ports are part of Terraform configuration files.
+
+### Concurrency  : Scale out via the process model :  Once the process is containerized and stateless, concurrency is not a constraint any more.  If we are using K8 we can orchestrate the cluster deploys (green-blue deploys) and resource needs better.
+
+### Disposability : Maximize robustness with fast startup and graceful shutdown :  With the above setup, the delay here is only imposed by the App’s needs.  If the app is strictly stateless then this is not constraint.
+
+
+### Dev/prod parity  Keep development, staging, and production as similar as possible :
+
+### Logs  Treat logs as event streams
+
+### Where we fell short
+
+Configuration for core aspects (like Nexus usage) is part of the Docker Build.  Some configuration is hidden outside of Terraform scripts
+How are we managing the same dependency but multiple versions floating around different services ?
+Inconsistencies in format, naming, logging
+Controlling unused variables or proliferation of config files
+Apps running within a Managed Service
+
+
+## Working with Managed Services
+
+![self-managed apps](images/managed-service-deploy.png)
+
+Walking through the 12-factor considerations.  What has changed here is (all else remains the same as the base case in self-managed containers):
+
+### Dependencies : Explicitly declare and isolate dependencies  : When a managed services creates a container for you and all you are supplying is a Container configuration -  what are our constraints:
+The dependent jars and version have to come from our storage (we cannot provide a link to an external source).  
+As shown in the diagram above - we can drift in our library versions and it will be difficult to catch 
+
+### Config:  Store config in the environment :  We use Terraform for orchestration.  Configuration variables are declared in the terraform files.   The configuration includes centrally adapted services such as the ones listed below.  
+    *Logging service
+    *SMTP service
+    *Backend Services (databases)
+
+If a single managed service is configured differently from one service to the next - there is much overlap and we may inadvertently break one when releasing the other.  Example:
+
+There are two services that are using the same managed service.  Both the services provide authentication in their config.  Changing one service and not the other can lead to authentication failure - depending on how the managed service is consuming this change.
+
+
+Build, release, run:  Strictly separate build and run stages :  Terraform separates the configuration for orchestrating the different environments (dev, stage, prod,..)
+
+
+Is the managed service adhering to the environment separation?  We had instances where a Dev run caused resource constraints on Prod
+
+
+
+
+### Disposability : Maximize robustness with fast startup and graceful shutdown : 
+The managed service may not be ready for a restart and need an alternate procedure like - Drain and restart.  
+
+
+## Where we fell short
+Working within the constraints imposed by the managed service we are moving into a semi controlled process; the challenge came to us in :
+Managing dependencies and dependency drifts within the services
+When different services are running the same managed service, changes to one services might impact the other
+Is the managed service adhering to how we are separating our environments?
+Restarting of the managed service has to be controlled by our use case.  We cannot rely on the managed service to restart correctly per our requirements.
+
 
  
+
+ 
+
+ 
+
+
 
 
 #
@@ -125,91 +126,10 @@ The Twelve Factor App is a Software as a Service (SaaS) design methodology creat
 
 
 
----------
-
-AA-Streaming Build process 
-
-Current build pipeline is in the diagram below. 
-1. Resources (dependencies for container) are loaded into GCS bucket
-2. Jenkins retrieves these versioned resource files (see gcsResourcesBucketPath below)
-3. Jenkins Executes the grade command scripts to generate the image
-
- Reasoning behind: Build Dataflow Template
-
-Dataflow templates use runtime parameters to accept values that are only available during pipeline execution. To customize the execution of a templated pipeline, you can pass these parameters to functions that run within the pipeline (such as a DoFn).  To create a template from your Apache Beam pipeline, you must modify your pipeline code to support runtime parameters:
-
-    Use ValueProvider for all pipeline options that you want to set or use at runtime.
-    Call I/O methods that accept runtime parameters wherever you want to parameterize your pipeline.
-    Use DoFn objects that accept runtime parameters.
-
-Then, create and stage your template.
 
 
 
  
 
  
-
- 
-
-
-    #!groovy
-    @Library("dsv") _
-
-
-    gitFlow {
-
-        stage("Gradle build") {
-            sh("./gradlew clean build")
-            junit(allowEmptyResults: true, testResults: "**/build/test-results/test/*.xml")
-        }
-
-        stage("Prepare Variables") {
-            gitFlow.whenMaster {
-                GCS_ACCOUNT = "iodine-jenkins-sa-prod"
-                GOOGLE_PROJECT_ID = "prd-dumbo-00-808d68"
-                IODINE_ENVIRONMENT = "PROD"
-                prefix = "prd-"
-            }
-
-            gitFlow.whenDevelop {
-                GCS_ACCOUNT = "iodine-jenkins-sa-dev"
-                GOOGLE_PROJECT_ID = "dev-dumbo-00-0cef88"
-                IODINE_ENVIRONMENT = "DEV"
-                prefix = "dev-"
-            }
-
-            gitFlow.whenFeature {
-                GCS_ACCOUNT = "iodine-jenkins-sa-sbx"
-                GOOGLE_PROJECT_ID = "sbx-dumbo-00-a0ad9e"
-                IODINE_ENVIRONMENT = "SBX"
-                prefix = "sbx-"
-            }
-        }
-
-        gitFlow.deployStage("Build Dataflow Template") {
-
-            withCredentials([file(credentialsId: GCS_ACCOUNT, variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                gcsResourcesBucketPath = "gs://${prefix}streaming-resource"
-                gcsDataflowBucketPath = "gs://${prefix}streaming-dataflow"
-
-                sh "gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}"
-                sh "gcloud config set account iodine-jenkins-sa@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com"
-                sh "gcloud config set core/project ${GOOGLE_PROJECT_ID}"
-
-                sh """./gradlew prepareTemplate \
-                    -PgcpProject=${GOOGLE_PROJECT_ID} \
-                    -PstagingLocation=${gcsResourcesBucketPath} \
-                    -PtempLocation=${gcsDataflowBucketPath} \
-                    -PtemplateLocation=${gcsResourcesBucketPath} \
-                    -PbuildVersion=${version}
-                """
-
-                archiveArtifacts '*_template'
-                sh "rm *_template"
-
-            }
-        }
-    }
-
 
