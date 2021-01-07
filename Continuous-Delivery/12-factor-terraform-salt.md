@@ -13,40 +13,51 @@ Apps that are running within a cloud managed services and are deployed within th
 ![self-managed apps](images/container-deploy.png)
 
 Walking through the 12-factor considerations:
-### Codebase : One codebase tracked in revision control, many deploys  : There is a one to one correspondence between Code base version (git) to Build Container version.  Container version is declared in a separate file in the code base.
+### Codebase : 
+*One codebase tracked in revision control, many deploys*  : There is a one to one correspondence between Code base version (git) to Build Container version.  Container version is declared in a separate file in the code base.
 
 
-### Dependencies : Explicitly declare and isolate dependencies  : Dependencies are managed in a Docker Template file.  All self-managed apps within the same project share this dependency.
+### Dependencies : 
+*Explicitly declare and isolate dependencies*  : Dependencies are managed in a Docker Template file.  All self-managed apps within the same project share this dependency.
 
 
-### Config:  Store config in the environment :  We use Terraform for orchestration.  Configuration variables are declared in the terraform files.   The configuration includes centrally adapted services such as:
+### Config:  
+*Store config in the environment* :  We use Terraform for orchestration.  Configuration variables are declared in the terraform files.   The configuration includes centrally adapted services such as:
 Logging service
 SMTP service
 Backend Services (databases)
 
-### Backing services : Treat backing services as attached resources : Configuration files in (3 above) state the values for these variables
+### Backing services : 
+*Treat backing services as attached resources* : Configuration files in (3 above) state the values for these variables
 
 
-### Build, release, run:  Strictly separate build and run stages :  Terraform separates the configuration for orchestrating the different environments (dev, stage, prod,..)
+### Build, release, run:  
+*Strictly separate build and run stages* :  Terraform separates the configuration for orchestrating the different environments (dev, stage, prod,..)
 Deploy stage attaches environment specific variables from terraform scripts to update the container.
 The Version to be deployed is part of the terraform scripts
 Terraform scripts are Validated and Tested before deploy
 
 
-### Processes : Execute the app as one or more stateless processes :  Apps are stateless except the caching layer.  How do we bring statelessness to the caching layer?
+### Processes : 
+*Execute the app as one or more stateless processes* :  Apps are stateless except the caching layer.  How do we bring statelessness to the caching layer?
 Caching layer is a service by itself, Apps use REST calls to update and retrieve its content
 
 
-### Port binding  Export services via port binding :  Ports are part of Terraform configuration files.
+### Port binding  
+*Export services via port binding* :  Ports are part of Terraform configuration files.
 
-### Concurrency  : Scale out via the process model :  Once the process is containerized and stateless, concurrency is not a constraint any more.  If we are using K8 we can orchestrate the cluster deploys (green-blue deploys) and resource needs better.
+### Concurrency: 
+*Scale out via the process model* :  Once the process is containerized and stateless, concurrency is not a constraint any more.  If we are using K8 we can orchestrate the cluster deploys (green-blue deploys) and resource needs better.
 
-### Disposability : Maximize robustness with fast startup and graceful shutdown :  With the above setup, the delay here is only imposed by the App’s needs.  If the app is strictly stateless then this is not constraint.
+### Disposability: 
+*Maximize robustness with fast startup and graceful shutdown* :  With the above setup, the delay here is only imposed by the App’s needs.  If the app is strictly stateless then this is not constraint.
 
 
-### Dev/prod parity  Keep development, staging, and production as similar as possible :
+### Dev/prod parity
+*Keep development, staging, and production as similar as possible* :
 
-### Logs  Treat logs as event streams
+### Logs 
+*Treat logs as event streams*
 
 ### Where we fell short
 
