@@ -11,32 +11,34 @@ Batch jobs typically follow the Map->Reduce pattern where the reductions start w
 
 Understanding what we need from data
  Understanding what we need from our data aggregations is an important first step as there are many variants based on the type of data one is working with. A few are listed below:
-Batch with Fixed Windows
-Streaming analysis with allowed lateness
-Session analysis
-Corrections on very late data
+> Batch with Fixed Windows
+> Streaming analysis with allowed lateness
+> Session analysis
+> Corrections on very late data
+
 Typically Alerts/Trend analysis processes are less sensitive to delays unless there is a significant delay in data.
 Whereas, aggregations/unique counts analysis need to be accurate with time. These processes need to sense delays, correct past data and follow through to re-report or re-run dependent scripts.
-Why Apache Beam
+
+## Why Apache Beam
 There are many articles that talk about Beam and its usage. Here is one to get started LINK. What Beam gave us:
-Flexibility: Beam as a runner opens us to many streaming analysis platforms independent of cloud. With many cloud options out there, a solution that is cloud agnostic is safer.
-Correctness: Using Event-time and the windowing options (Fixed/Sliding/Session) we can self-correct our aggregations/counts with time. 
-Modular : Streaming aggregations pipeline can be used for batch processing.  To correct past data we use the same streaming pipeline, removing the possibility of incorrect data being inserted based on the run.
-Accountability : Moving away from SQL centric solutions allows us to bring a test environment to include a controlled and audit-able release process.
+*Flexibility: Beam as a runner opens us to many streaming analysis platforms independent of cloud. With many cloud options out there, a solution that is cloud agnostic is safer.
+*Correctness: Using Event-time and the windowing options (Fixed/Sliding/Session) we can self-correct our aggregations/counts with time. 
+*Modular : Streaming aggregations pipeline can be used for batch processing.  To correct past data we use the same streaming pipeline, removing the possibility of incorrect data being inserted based on the run.
+*Accountability : Moving away from SQL centric solutions allows us to bring a test environment to include a controlled and audit-able release process.
 
-The best of Beam
-PCollection - immutable container for elements;
-PTransform - operation that consumes one PCollection and produces another PCollection;
-No batch or streaming pipelines, only bounded and unbounded PCollections;
-Pipeline and PTransforms are serialized and run on a variety of runners, including Cloud Dataflow.
-Using Event time (instead of processing time) brings alignment to data and eventual correctness.
+###The best of Beam
+*PCollection - immutable container for elements;
+*PTransform - operation that consumes one PCollection and produces another PCollection;
+*No batch or streaming pipelines, only bounded and unbounded PCollections;
+*Pipeline and PTransforms are serialized and run on a variety of runners, including Cloud Dataflow.
+*Using Event time (instead of processing time) brings alignment to data and eventual correctness.
 
-Using event time instead of processing timeUsing Windowing to control late data and build sensors
+*Using event time instead of processing timeUsing Windowing to control late data and build sensors
 
 ![batch-processing](images/dataflow-eventtime.png)
 
 
-Sliding Windows with allowed latenessControlling the environment
+*Sliding Windows with allowed latenessControlling the environment
 
 ![batch-processing](images/dataflow-slidingwindow.png)
 
@@ -48,12 +50,15 @@ There are many factors that one has to think about when building this system. Hi
 4. Cost effectiveness: If the window size is large then perhaps adding data completeness sensors from streams and running batch aggregations from DB raw data may be faster and cheaper.
 5. Sensors: Sense long delays in data using sensors and rerun dependent jobs with DAG dependency checks.
 6. Parallel processing: 
-Release code without disturbing the data flow
+
+##Release code without disturbing the data flow
 We cannot update the process unless we have a proper way to 
 1. Drain the existing in memory for the current window and push the data to storage.
 2. Adjust the watermark to reprocess the data post restart of the process.
 3. Pause Alert triggers during release. 
-Ensure corrected data is the one in use
+
+##Ensure corrected data is the one in use
 Streamed content in DB should update with the latest update time. Downstream processes should retrieve data for the latest timestamp for a given window. 
-Conclusions
+
+##Conclusions
 With the unpredictable nature of when the data arrival, the growing acceptance of big data and with the call for data correctness, Apache Beam leads us to a decently viable solution. Even with Beam doing the heavy lifting, there is much to be considered and evaluated. This article is highlighting some of our concerns and struggles.
